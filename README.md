@@ -1,4 +1,4 @@
-# Elastic-Timeline
+# Elastic Activity Timeline
 Display timeline with elastic expand
 
 This is an exmple, how you can implement elastic timeline display when you scroll down the page.
@@ -14,3 +14,10 @@ $nid: Node ID<br>
 $uid: Optionally user id. If not provided, will add current logged in user id.<br>
 
 <img src="screenshot.jpg" alt="screenshot" />
+
+Activity logs will auto load when user scroll down. User can view the log using the url <code>/activitylogs/{type}</code>
+
+--------------------------------------------------------------------------------------
+You can contact me at:
+<strong>Shafiq Hossain</strong>
+<em>md.shafiq.hossain@gmail.com</em>
