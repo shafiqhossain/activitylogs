@@ -12,3 +12,5 @@ $title: Title to display about the log<br>
 $message: Detail of the log<br>
 $nid: Node ID<br>
 $uid: Optionally user id. If not provided, will add current logged in user id.<br>
+
+<img src="screenshot.jpg" alt="screenshot" />
