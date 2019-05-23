@@ -1,0 +1,212 @@
+<?php
+// $Id: activitylogs.module,v 1.0 2019/03/23 12:55:37 shafiq Exp $
+
+
+/**
+ * @file
+ * Manage the activity logs
+ */
+
+
+
+/**
+ * Implements hook_permission().
+ */
+function activitylogs_permission() {
+  return array(
+    'view activitylogs' => array(
+      'title' => t('View Activity Logs'),
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_theme().
+ *
+ * Defines the theming capabilities provided by this module.
+ */
+function activitylogs_theme() {
+  return array(
+	'activitylogs_timeline' => array(
+	  'render element' => 'form',
+	  'template' => 'activitylogs_timeline',
+	),
+  );
+}
+
+/**
+ * Implementation of hook_menu().
+*/
+function activitylogs_menu() {
+  $items['activitylogs'] = array(
+    'title' => t('Activity Logs Timelines'),
+    'description' => t('Activity Logs Timelines'),
+    'page callback' => 'activitylogs_timeline',
+    'access arguments' => array('view activitylogs'),
+    'file' => 'activitylogs.timeline.inc',
+    'type' => MENU_CALLBACK,
+  );
+  $items['activitylogs/timelines/load'] = array(
+    'title' => t('Activity Logs Timelines Load'),
+    'description' => t('Activity Logs Timelines Load'),
+    'page callback' => 'activitylogs_timelines_load',
+    'access arguments' => array('view activitylogs'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  //Tabs
+  $items['node/%node/activitylogs'] = array(
+    'title' => 'Activity Timelines',
+    'type' => MENU_LOCAL_TASK,
+    'page callback' => 'activitylogs_timeline_tab',
+    'page arguments' => array(1, 3),
+	'access callback' => 'activitylogs_access_check',
+    'access arguments' => array(1,'node'),
+  );
+
+
+  $items['activitylogs/message'] = array(
+    'title' => t('Message'),
+    'page callback' => 'activitylogs_message',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+
+  return $items;
+}
+
+
+/**
+ * Implementation of activitylogs message().
+ *
+ *   rendering of the activitylogs message.
+ */
+function activitylogs_message() {
+  $output = "<div class='message'>".(isset($_SESSION['activitylogs_message']) ? $_SESSION['activitylogs_message'] : '')."</div>";
+  return $output;
+}
+
+
+/**
+ * Implements activity_log().
+ * Add activity to table
+ */
+function activity_log($type, $title, $message, $nid, $uid=0) {
+  global $user;
+	
+  $sql  = 'INSERT INTO {activitylogs} (title, message, nid, uid, type, log_date) VALUES (:title, :message, :nid, :uid, :type, :log_date) ';
+  $values = array(
+	':title' => $title,
+	':message' => $message,
+	':nid' => $nid,
+	':uid' => (!$uid ? $user->uid : $uid),
+	':type' => $type,
+	':log_date' => date('Y-m-d H:i:s'),
+  );
+  $log_id = db_query($sql, $values, array('return' => Database::RETURN_INSERT_ID));
+  
+  return $log_id;
+}
+
+
+/**
+ * Implements activitylogs_timeline_tab() menu callback.
+ * Pass it to activitylogs_timelines_load()
+ */
+function activitylogs_timeline_tab($node = false, $type='node') {
+  if(!isset($node->nid)) return;
+  if(empty($type)) $type = 'node';
+
+  //Load activitylogs.timeline.inc from the module.
+  module_load_include('inc', 'activitylogs', 'activitylogs.timeline');
+
+  return activitylogs_timeline($type, $node->nid);
+}
+
+/**
+ * Check permission and node type where the Tabs will be displayed.
+ */
+function activitylogs_access_check($node = false, $type='') {
+  if(!user_access('view activitylogs')) return false;
+  
+  return true;
+}
+
+
+/**
+ * Load activity logs for timeline.
+ *
+ */
+function activitylogs_timelines_load($type = '', $nid = 0, $uid = 0) {
+
+  //sanitize post value
+  $page_number = (isset($_POST["page"]) ? intval($_POST["page"]) : 1);
+  $item_per_page = 20;
+
+  if(!is_numeric($page_number)){
+    exit();
+  }
+
+  //get current starting point of records
+  $position = (($page_number-1) * $item_per_page);
+
+  //list all transactions
+  $query = db_select('activitylogs', 'a')
+  			->range($position, $item_per_page)
+			->fields ('a');
+
+  //filter by type
+  if(!empty($type)) {
+    $query->condition('a.type', $type, '=');
+  }
+
+  //filter by nid
+  if(!empty($nid)) {
+    $query->condition('a.nid', $nid, '=');
+  }
+
+  //filter by uid
+  if(!empty($uid)) {
+    $query->condition('a.uid', $uid, '=');
+  }
+
+  $query->orderBy('a.log_date', 'DESC');
+
+  $results = $query->execute();
+
+  $output = '';
+  foreach ($results as $row) {
+	$uid = $row->uid;
+	if($uid) {
+	  $account = user_load($uid);
+	  $display_name = $account->name;
+	}
+	
+	$output .= '<div class="cd-timeline__block js-cd-block">';
+	$output .= '	<div class="cd-timeline__img cd-timeline__img--picture js-cd-img">';
+	$output .= '	  &nbsp;';
+	$output .= '	</div> <!-- cd-timeline__img -->';
+	
+	$output .= '	<div class="cd-timeline__content js-cd-content">';
+	$output .= '		<h2>'.$row->title.'</h2>';
+	$output .= '		<p>'.$row->message.'</p>';
+	
+	if($uid) {
+	  $output .= '		<a target="_blank" href="/user/'.$uid.'" class="cd-timeline__read-more">'.$display_name.'</a>';
+	}
+	else {
+	  $output .= '		<div class="cd-timeline__read-more">&nbsp;</div>';
+	}
+	
+	$output .= '		<span class="cd-timeline__date">'.date('F j, Y h:i A', strtotime($row->log_date)).'</span>';
+	$output .= '	</div> <!-- cd-timeline__content -->';
+	$output .= '</div> <!-- cd-timeline__block -->';
+  }
+  
+  print $output;
+}
+
+
+?>

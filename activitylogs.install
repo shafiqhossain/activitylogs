@@ -1,0 +1,62 @@
+<?php
+/**
+ * @file
+ * Install, update and uninstall functions for the activitylogs  module.
+ */
+
+
+/**
+ * Implements hook_schema().
+ */
+function activitylogs_schema() {
+  $schema['activitylogs'] = array(
+    'description' => 'Stores the log records.',
+    'fields' => array(
+      'log_id' => array(
+        'description' => 'Log ID.',
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'title' => array(
+        'description' => 'Message Title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'message' => array(
+        'description' => 'Message',
+        'type' => 'text',
+      ),
+      'nid' => array(
+        'description' => 'Node ID',
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+      ),
+      'uid' => array(
+        'description' => 'User ID',
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+      ),
+      'type' => array(
+        'description' => 'Type of log',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => FALSE,
+        'default' => '',
+      ),
+      'log_date' => array(
+        'description' => 'Log date',
+		'type' => 'datetime',
+		'mysql_type' => 'datetime',
+        'not null' => FALSE,
+      ),
+    ),
+    'primary key' => array('log_id'),
+  );
+
+  return $schema;
+}
